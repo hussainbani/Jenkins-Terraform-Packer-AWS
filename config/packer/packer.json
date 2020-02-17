@@ -1,0 +1,40 @@
+{
+    "variables": {
+        "aws_access_key": "",
+        "aws_secret_key": "",
+        "ami_name": "ami-{{user `tier`}}-{{timestamp}}",
+        "aws_region": "",
+        "ssh_username": "ubuntu",
+        "tier": ""
+    },
+    "builders": [{
+        "access_key": "{{user `aws_access_key`}}",
+ 	"secret_key": "{{user `aws_secret_key`}}",
+	"type": "amazon-ebs",
+        "region": "{{user `aws_region`}}",
+        "instance_type": "t2.micro",
+        "force_deregister": "true",
+        "ssh_username": "{{user `ssh_username`}}",
+        "communicator": "ssh",
+        "associate_public_ip_address": true,
+        "ami_name": "{{user `ami_name`}}",
+        "source_ami": "ami-0765f2a0e038358f8",
+        "run_tags": {
+            "Name": "packer-build-image"
+        }
+    }],
+    "provisioners": [{
+            "type": "shell",
+            "inline": "while [ ! -f /var/lib/cloud/instance/boot-finished ]; do echo 'Waiting for cloud-init...'; sleep 1; done"
+        },
+        {
+            "type": "ansible",
+            "playbook_file": "./master.yml",
+            "ansible_env_vars": ["ANSIBLE_HOST_KEY_CHECKING=False", "ANSIBLE_SSH_ARGS='-o ForwardAgent=yes -o ControlMaster=auto -o ControlPersist=60s'", "ANSIBLE_NOCOLOR=True"],
+            "user": "ubuntu",
+            "extra_arguments": [
+                "--extra-vars",
+                "tier={{user `tier`}} region={{user `aws_region`}}"
+            ]
+        }]
+}

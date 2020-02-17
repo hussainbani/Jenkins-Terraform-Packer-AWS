@@ -1,0 +1,16 @@
+- name: daemon-reload 
+  systemd:
+    daemon_reload: yes
+
+- name: Start {{ tier }} service
+  service:
+    name: "{{ tier }}"
+    state: started
+    enabled: yes
+  ignore_errors: yes
+
+- name: rsyslog-restart
+  service:
+    name: rsyslog
+    state: started
+  ignore_errors: yes

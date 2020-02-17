@@ -1,0 +1,68 @@
+pipeline {
+    agent {
+    node {
+      label 'master'
+      customWorkspace '/toptal/workspace'
+    }
+    }
+    stages {
+        stage('Git Checkout') {
+            steps {
+                echo "Git Checkout"
+            }
+        }
+
+        stage('Running Test on Code') {
+        steps {
+        nodejs(nodeJSInstallationName: 'Nodejs') {
+                sh """
+                cd $WORKSPACE/${tier}
+                npm install
+                npm start &
+                """
+                sh "cd $WORKSPACE/${tier} && npm test"
+                }
+        }
+        }
+
+        stage('Creating directories'){  
+    steps { 
+            sh "mkdir -p ${WORKSPACE}/Artifacts/${tier}/${BUILD_NUMBER}"
+            sh "chown  -R jenkins:jenkins ${WORKSPACE}/Artifacts/${tier}/${BUILD_NUMBER}/"
+        }
+        }
+        
+        stage('Archiving and Copying for Deployment via ansible'){  
+    steps { 
+            sh "cd ${WORKSPACE}/${tier}"
+            sh "tar --exclude='Jenkinsfile' --exclude='.git' --exclude='node_modules' --exclude='package-lock.json' -cvf ${WORKSPACE}/Artifacts/${tier}/${BUILD_NUMBER}/${tier}.tar ${tier}/"
+            sh "sudo chown -R ubuntu:ubuntu ${WORKSPACE}/Artifacts/${tier}/${BUILD_NUMBER}/${tier}.tar"
+            sh "sudo cp -av ${WORKSPACE}/Artifacts/${tier}/${BUILD_NUMBER}/${tier}.tar /toptal/config/packer/webserver.role/files/"
+        }
+        }
+
+        stage('Build AMI using Packer'){
+            steps {
+                withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: env.aws_creds, usernameVariable: 'AWSACESSKEY', passwordVariable: 'AWSSECRETKEY']])
+            {
+            sh "cd /toptal/config/packer && packer build -var aws_region=${awsregion} -var tier=${tier} -var aws_access_key=${AWSACESSKEY} -var aws_secret_key=${AWSSECRETKEY} packer.json"
+            }   
+            }
+        }
+    
+        stage('Deploy Using Terraform'){
+            steps {
+                withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: env.aws_creds, usernameVariable: 'AWSACESSKEY', passwordVariable: 'AWSSECRETKEY']])
+            {
+            sh "cd /toptal/config/terraform && terraform apply -var region=${awsregion} -var ACCESS_KEY=${AWSACESSKEY} -var SECRET_KEY=${AWSSECRETKEY} -var DB_INSTANCE_TYPE=${dbinstancetype} -var instance_type=${instance_type} -var ASG_MIN=${asg_min_capacity} -var ASG_MAX=${asg_max_capacity} -var ASG_DESIRED=${asg_desired_capacity} -auto-approve"}            
+        }
+        }
+
+        stage("Publish terrafrom-state file to s3") {
+         steps {
+             sh "aws s3 cp /toptal/config/terraform/terraform.tfstate s3://toptal-artifact/terrafrom-state/ --region $awsregion"
+}
+   }
+
+    }
+}

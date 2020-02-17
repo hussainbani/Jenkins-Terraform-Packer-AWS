@@ -1,0 +1,13 @@
+[Unit]
+Description={{ tier }} daemon
+After=network.target
+[Service]
+User=root
+WorkingDirectory=/app/{{ tier }}/
+EnvironmentFile=/etc/environment
+ExecStart=/usr/bin/npm start
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=npm
+[Install]
+WantedBy=multi-user.target

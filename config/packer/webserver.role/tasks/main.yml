@@ -1,0 +1,87 @@
+- name: Install repo
+  shell: curl -sL https://deb.nodesource.com/setup_8.x -o nodesource_setup.sh
+  args:
+    chdir: /tmp
+
+- name: Add cache using bash script
+  shell: bash nodesource_setup.sh
+  args:
+    chdir: /tmp
+
+- name: Install nodejs
+  apt: 
+    name:  "{{ item }}"
+    state: latest
+    update_cache: yes
+  with_items:
+    - nodejs
+    - python3-pip
+
+- name: Install awscli
+  pip:
+    name: awscli
+    executable: pip3
+    
+- name: Create a directory /app
+  file:
+    path: /app
+    state: directory
+
+- name: Create a directory /var/log/{{ tier }}
+  file:
+    path: "/var/log/{{ tier }}"
+    state: directory
+    mode: '0755'
+    owner: syslog
+    group: root
+
+- name: Extract {{ tier }}.tar to /app/{{ tier }}
+  unarchive:
+    src: "{{ tier }}.tar"
+    dest: /app
+    owner: ubuntu
+    group: ubuntu
+    mode: 0755
+
+- name: Install packages based on package.json.
+  shell: npm install
+  args:
+    chdir: "/app/{{ tier }}"
+  ignore_errors: yes 
+
+
+- name: Copy Service file {{ tier }}
+  template:
+    src: template.service.j2
+    dest: "/etc/systemd/system/{{ tier }}.service"
+    owner: root
+    group: root
+    mode: 0755
+  notify:
+    - daemon-reload
+    - Start {{ tier }} service
+
+- name: Copy {{ tier }}.conf file to logrotate.d/ for log rotation
+  template:
+    src: app.conf.j2
+    dest: "/etc/logrotate.d/{{ tier }}.conf"
+    owner: root
+    group: root
+    mode: 0644
+
+- name: Copy {{ tier }}.conf file rsyslog.d/ for log creation
+  template:
+    src: template.conf.j2
+    dest: "/etc/rsyslog.d/{{ tier }}.conf"
+    owner: root
+    group: root
+    mode: 0644
+  notify:
+    - rsyslog-restart
+
+- name: Cron Used to sync logs to S3 every minute
+  cron:
+    name: "copy logs to S3"
+    minute: "*/1"
+    hour: "*"
+    job: "/usr/local/bin/aws s3 sync /var/log/{{ tier }} s3://logs-toptal-test/{{ tier }}"

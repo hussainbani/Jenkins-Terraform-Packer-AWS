@@ -1,0 +1,7 @@
+- hosts: all
+  connection: ssh
+  become: yes
+  become_method: sudo
+  gather_facts: no
+  roles:
+    - { role: webserver.role }

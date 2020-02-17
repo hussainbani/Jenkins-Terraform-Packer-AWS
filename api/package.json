@@ -1,0 +1,20 @@
+{
+  "name": "devops_api",
+  "version": "0.0.0",
+  "private": true,
+  "main": "",
+  "scripts": {
+    "start": "node ./bin/www",
+    "test": "./node_modules/.bin/jasmine-node ./spec --matchall",
+    "stop": "pkill -9 node"
+  },
+  "dependencies": {
+    "express": "~4.13.1",
+    "node-uuid": "1.4.7",
+    "pg": "5.2.1",
+    "request": "^2.88.2"
+  },
+  "devDependencies": {
+    "jasmine-node": "*"
+  }
+}

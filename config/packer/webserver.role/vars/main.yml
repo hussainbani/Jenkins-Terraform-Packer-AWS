@@ -1,0 +1,4 @@
+---
+
+tier: "{{ tier }}"
+region: "{{ region }}"
