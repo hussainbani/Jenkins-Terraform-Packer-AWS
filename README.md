@@ -1,7 +1,6 @@
 # Jenkins-Terraform-Packer-AWS
-This Pipeline automates 3tier node app. WEB --> API --> RDS
-All build is deployed without downtime.
-Automating build using Jenkins, Packer, Terraform, AWS
+This Pipeline automates 3tier node app. "WEB --> API --> RDS". All build is deployed without downtime.
+
 This does the following things:
 1) Creates AMI using packer
 2) Configuration Management using ansible
