@@ -3,7 +3,7 @@ This Pipeline automates 3tier node app. "WEB --> API --> RDS". All build is depl
 
 This does the following things:
 1) Creates AMI using packer.
-2) Configuration Management using ansible.
+2) Configuration Management using ansible
 3)Deployment using terraform which includes following resources:
 	ASG and ALB for API & WEB
 	S3 Bucket for logs using cron
